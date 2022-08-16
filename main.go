@@ -1,14 +1,25 @@
 package main
 
 import (
-	"github.com/dropdevrahul/gocache-go-client/gocacheclient"
+	"fmt"
+
+	"github.com/dropdevrahul/gocacheclient/gocacheclient"
 )
 
 func main() {
 	client := gocacheclient.Client{
-		host: "localhost",
-		port: "8888",
+		Host: "localhost",
+		Port: "8888",
 	}
-	client.Connect()
-	client.Set("A", "234")
+	i := 0
+	for i < 10 {
+		i += 1
+		err := client.Set("A", fmt.Sprintf("%d", i))
+		if err != nil {
+			fmt.Println(err.Error())
+			return
+		}
+		val, err := client.GET("A")
+		fmt.Println("value", val)
+	}
 }

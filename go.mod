@@ -1,3 +1,3 @@
-module github.com/dropdevrahul/gocache-go-client
+module github.com/dropdevrahul/gocacheclient
 
 go 1.17
