@@ -20,6 +20,9 @@ func main() {
 			return
 		}
 		val, err := client.GET("A")
-		fmt.Println("value", val)
+		fmt.Println("Value received", val)
 	}
+
+	v, _ := client.GET("ahsdg")
+	fmt.Printf("non existent key: %s \n", v)
 }
