@@ -53,12 +53,10 @@ func (c Client) Set(key string, value string) error {
 	defer conn.Close()
 	conn.Read(buff)
 
-	fmt.Printf("Response: %s", string(buff))
-
 	return err
 }
 
-func (c Client) GET(key string) (string, error) {
+func (c Client) Get(key string) (string, error) {
 	conn, err := c.Connect()
 	if err != nil {
 		fmt.Println(err.Error())
