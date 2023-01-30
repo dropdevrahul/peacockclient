@@ -9,14 +9,14 @@ import (
 )
 
 func main() {
-	flag.String("h", "localhost", "gocache server host")
-	flag.String("p", "8888", "gocache server port")
+	h := flag.String("host", "localhost", "gocache server host")
+	p := flag.String("port", "8888", "gocache server port")
 
 	flag.Parse()
 
 	c := gocacheclient.Client{
-		Host: "localhost",
-		Port: "8888",
+		Host: *h,
+		Port: *p,
 	}
 
 	var inputs [3]string
