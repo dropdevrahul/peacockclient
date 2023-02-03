@@ -24,28 +24,32 @@ func main() {
 		fmt.Printf("-> ")
 		fmt.Scanln(&inputs[0], &inputs[1], &inputs[2])
 
-		if strings.ToUpper(inputs[0]) == "GET" {
+		switch strings.ToUpper(inputs[0]) {
+		case "GET":
 			r, err := c.Get(inputs[1])
 			if err != nil {
 				fmt.Println(err)
-				continue
 			}
-
 			fmt.Println(string(r.Data))
-		} else if strings.ToUpper(inputs[0]) == "SET" {
+		case "SET":
 			r, err := c.Set(inputs[1], inputs[2])
 			if err != nil {
 				fmt.Println(err)
-				continue
 			}
-
 			if !r.IsStatus() {
 				fmt.Println("Request Failed " + r.Error)
 			}
-		} else {
+		case "DEL":
+			r, err := c.Del(inputs[1])
+			if err != nil {
+				fmt.Println(err)
+			}
+			if !r.IsStatus() {
+				fmt.Println("Request Failed " + r.Error)
+			}
+		default:
 			fmt.Println("Invalid command " + inputs[0])
 		}
-
 		inputs = [3]string{}
 	}
 }

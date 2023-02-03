@@ -23,10 +23,6 @@ func TestMultipleConnection(t *testing.T) {
 	wg.Wait()
 }
 
-func TestLargePayload(t *testing.T) {
-	payload := ""
-}
-
 func connectAndGo(c *gocacheclient.Client,
 	k string, v string, wg *sync.WaitGroup) {
 	defer wg.Done()

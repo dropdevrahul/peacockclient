@@ -12,8 +12,10 @@ const COMMAND_LENGTH int = 11 // in bytes
 const KEY_LENGTH int = 64     // in bytes
 const MAX_PAYLOAD_LENGTH int = 2048
 
-var GET_COMMAND string = "GET        "
-var SET_COMMAND string = "SET        "
+const GET_COMMAND string = "GET        "
+const SET_COMMAND string = "SET        "
+const DEL_COMMAND string = "DEL        "
+
 var ErrInvalidResponseNoNewLine = errors.New("invalid response from server: No new Line")
 var ErrInvalidResponseInvalidStatus = errors.New("invalid response from server: Invalid success code")
 var ErrFailedResponse = errors.New("failed response")
@@ -52,7 +54,7 @@ func (c Client) MakeHeader(l int) string {
 	return h
 }
 
-func (c Client) Send(cmd string) ([]byte, error) {
+func (c Client) Send(cmd string) (*Response, error) {
 	conn, err := c.Connect()
 	if err != nil {
 		fmt.Println(err.Error())
@@ -78,7 +80,9 @@ func (c Client) Send(cmd string) ([]byte, error) {
 	buff := make([]byte, MAX_PAYLOAD_LENGTH)
 	conn.Read(buff)
 
-	return buff, err
+	r, err := c.ParseResponse(buff)
+
+	return r, err
 }
 
 func (c Client) ParseResponse(b []byte) (r *Response, err error) {
@@ -106,12 +110,7 @@ func (c Client) Set(key string, value string) (r *Response, err error) {
 	cmd := SET_COMMAND + padKey + value
 	cmd = fmt.Sprintf("%-*s", MAX_PAYLOAD_LENGTH, cmd)
 
-	buff, err := c.Send(cmd)
-	if err != nil {
-		return r, err
-	}
-
-	r, err = c.ParseResponse(buff)
+	r, err = c.Send(cmd)
 
 	return r, err
 }
@@ -120,16 +119,15 @@ func (c Client) Get(key string) (*Response, error) {
 	padKey := fmt.Sprintf("%-*s ", KEY_LENGTH, key)
 	cmd := GET_COMMAND + padKey
 
-	buff, err := c.Send(cmd)
-	if err != nil {
-		return nil, err
-	}
+	r, err := c.Send(cmd)
 
-	r, err := c.ParseResponse(buff)
-	if err != nil || !r.IsStatus() {
-		fmt.Printf("Status Code: %d Err: %s\n", r.Status, r.Error)
-		return nil, ErrFailedResponse
-	}
+	return r, err
+}
 
+func (c Client) Del(key string) (*Response, error) {
+	padKey := fmt.Sprintf("%-*s ", KEY_LENGTH, key)
+	cmd := DEL_COMMAND + padKey
+
+	r, err := c.Send(cmd)
 	return r, err
 }
