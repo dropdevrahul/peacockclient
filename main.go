@@ -3,14 +3,16 @@ package main
 import (
 	"flag"
 	"fmt"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/dropdevrahul/gocacheclient/gocacheclient"
 )
 
 func main() {
 	h := flag.String("host", "localhost", "gocache server host")
-	p := flag.String("port", "8888", "gocache server port")
+	p := flag.String("port", "9999", "gocache server port")
 
 	flag.Parse()
 
@@ -36,17 +38,30 @@ func main() {
 			if err != nil {
 				fmt.Println(err)
 			}
-			if !r.IsStatus() {
-				fmt.Println("Request Failed " + r.Error)
-			}
+			fmt.Println(string(r.Data))
 		case "DEL":
 			r, err := c.Del(inputs[1])
 			if err != nil {
 				fmt.Println(err)
 			}
-			if !r.IsStatus() {
-				fmt.Println("Request Failed " + r.Error)
+			fmt.Println(string(r.Data))
+		case "SET_TTL":
+			ttl, err := strconv.Atoi(inputs[2])
+			if err != nil {
+				fmt.Println(err)
 			}
+
+			r, err := c.SetTTL(inputs[1], time.Second*time.Duration(ttl))
+			if err != nil {
+				fmt.Println(err)
+			}
+			fmt.Println(string(r.Data))
+		case "GET_TTL":
+			ttl, _, err := c.GetTTL(inputs[1])
+			if err != nil {
+				fmt.Println(err)
+			}
+			fmt.Println(ttl)
 		default:
 			fmt.Println("Invalid command " + inputs[0])
 		}

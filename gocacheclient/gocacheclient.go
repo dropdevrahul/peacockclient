@@ -1,20 +1,26 @@
 package gocacheclient
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"strconv"
-	"strings"
+	"time"
+
+	"github.com/dropdevrahul/gocache/protocol"
 )
 
 const COMMAND_LENGTH int = 11 // in bytes
 const KEY_LENGTH int = 64     // in bytes
 const MAX_PAYLOAD_LENGTH int = 2048
 
-const GET_COMMAND string = "GET        "
-const SET_COMMAND string = "SET        "
-const DEL_COMMAND string = "DEL        "
+const GET_COMMAND string = "GET"
+const SET_COMMAND string = "SET"
+const DEL_COMMAND string = "DEL"
+const SET_TTL_COMMAND string = "SET_TTL"
+const GET_TTL_COMMAND string = "GET_TTL"
 
 var ErrInvalidResponseNoNewLine = errors.New("invalid response from server: No new Line")
 var ErrInvalidResponseInvalidStatus = errors.New("invalid response from server: Invalid success code")
@@ -26,17 +32,7 @@ type Client struct {
 }
 
 type Response struct {
-	Status int // 1 success rest fail 0 undefined
-	Error  string
-	Data   []byte
-}
-
-func (r *Response) IsStatus() bool {
-	if r.Status == 1 {
-		return true
-	}
-
-	return false
+	Data []byte
 }
 
 func (c Client) Connect() (net.Conn, error) {
@@ -48,16 +44,21 @@ func (c Client) Connect() (net.Conn, error) {
 	return conn, nil
 }
 
-func (c Client) MakeHeader(l int) string {
-	h := fmt.Sprintf("%d\n", l)
+func (c Client) MakeHeader(l int) protocol.Header {
+	h := protocol.Header{
+		Len: l,
+	}
 
 	return h
 }
 
-func (c Client) Send(cmd string) (*Response, error) {
+func (c Client) Send(cmd string, key string, payload string) (*Response, error) {
+	cmd = c.PadCmd(cmd)
+	key = c.PadKey(key)
+
 	conn, err := c.Connect()
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Println(err.Error())
 
 		return nil, err
 	}
@@ -68,66 +69,84 @@ func (c Client) Send(cmd string) (*Response, error) {
 		return nil, errors.New("cmd too large")
 	}
 
-	h := c.MakeHeader(len(cmd))
-	cmd = h + cmd
-	cmdBytes := []byte(cmd)
+	body := []byte(cmd + key + payload)
+	h := c.MakeHeader(len(body))
+	cmdBytes := append(h.ToBytes(), body...)
 
 	n, err := conn.Write(cmdBytes)
-	if n != len(cmd) {
+	if n != len(cmdBytes) {
 		return nil, errors.New("Failed to send request")
 	}
 
-	buff := make([]byte, MAX_PAYLOAD_LENGTH)
-	conn.Read(buff)
-
-	r, err := c.ParseResponse(buff)
+	buff := bufio.NewReader(conn)
+	r, err := c.ReadResponse(buff)
 
 	return r, err
 }
 
-func (c Client) ParseResponse(b []byte) (r *Response, err error) {
-	r = &Response{}
-	h, d, ok := strings.Cut(string(b), "\n")
-	if !ok {
-		return r, ErrInvalidResponseNoNewLine
+func (c Client) ReadResponse(b *bufio.Reader) (*Response, error) {
+	r := &Response{}
+	h := protocol.Header{}
+	err := protocol.ReadHeaders(b, &h)
+	if err != nil {
+		return r, err
 	}
 
-	success, errMsg, ok := strings.Cut(h, " ")
-	successCode, err := strconv.Atoi(success)
-	if !ok || err != nil {
-		return r, ErrInvalidResponseInvalidStatus
+	d, err := protocol.ReadBody(b, h.Len)
+	if err != nil {
+		return r, err
 	}
 
-	r.Error = errMsg
-	r.Status = successCode
-	r.Data = []byte(d)
-
+	r.Data = d
 	return r, nil
 }
 
-func (c Client) Set(key string, value string) (r *Response, err error) {
+func (c Client) PadKey(key string) string {
 	padKey := fmt.Sprintf("%-*s ", KEY_LENGTH, key)
-	cmd := SET_COMMAND + padKey + value
-	cmd = fmt.Sprintf("%-*s", MAX_PAYLOAD_LENGTH, cmd)
+	return padKey
+}
 
-	r, err = c.Send(cmd)
+func (c Client) PadCmd(cmd string) string {
+	return fmt.Sprintf("%11s", cmd)
+}
 
+func (c Client) Set(key string, value string) (r *Response, err error) {
+	r, err = c.Send(SET_COMMAND, key, value)
 	return r, err
 }
 
 func (c Client) Get(key string) (*Response, error) {
-	padKey := fmt.Sprintf("%-*s ", KEY_LENGTH, key)
-	cmd := GET_COMMAND + padKey
-
-	r, err := c.Send(cmd)
-
+	r, err := c.Send(GET_COMMAND, key, "")
 	return r, err
 }
 
 func (c Client) Del(key string) (*Response, error) {
-	padKey := fmt.Sprintf("%-*s ", KEY_LENGTH, key)
-	cmd := DEL_COMMAND + padKey
-
-	r, err := c.Send(cmd)
+	r, err := c.Send(DEL_COMMAND, key, "")
 	return r, err
+}
+
+func (c Client) ttlToString(ttl time.Duration) string {
+	ttls := fmt.Sprintf("%d", int(ttl.Seconds()))
+	return ttls
+}
+
+func (c Client) SetTTL(key string, ttl time.Duration) (*Response, error) {
+	payload := c.ttlToString(ttl)
+	r, err := c.Send(SET_TTL_COMMAND, key, payload)
+	return r, err
+}
+
+func (c Client) GetTTL(key string) (time.Duration, *Response, error) {
+	var ttl time.Duration
+	r, err := c.Send(GET_TTL_COMMAND, key, "")
+	if err == nil {
+		i, err := strconv.Atoi(string(r.Data))
+		if err != nil {
+			return 0, r, err
+		}
+		ttl = time.Second * time.Duration(i)
+		return ttl, r, err
+	}
+
+	return 0, r, err
 }
