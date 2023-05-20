@@ -1,11 +1,11 @@
-package gocacheclient_test
+package peacockclient_test
 
 import (
 	"fmt"
 	"sync"
 	"testing"
 
-	"github.com/dropdevrahul/gocacheclient/gocacheclient"
+	"github.com/dropdevrahul/peacockclient"
 )
 
 func TestMultipleConnection(t *testing.T) {
@@ -13,7 +13,7 @@ func TestMultipleConnection(t *testing.T) {
 
 	for i := 0; i < 8; i++ {
 		wg.Add(1)
-		c := gocacheclient.Client{
+		c := peacockclient.Client{
 			Host: "127.0.0.1",
 			Port: "9999",
 		}
@@ -23,7 +23,7 @@ func TestMultipleConnection(t *testing.T) {
 	wg.Wait()
 }
 
-func connectAndGo(c *gocacheclient.Client,
+func connectAndGo(c *peacockclient.Client,
 	k string, v string, wg *sync.WaitGroup) {
 	defer wg.Done()
 	r, _ := c.Set(k, v)

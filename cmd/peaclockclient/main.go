@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dropdevrahul/gocacheclient/gocacheclient"
+	"github.com/dropdevrahul/peacockclient"
 )
 
 func main() {
@@ -16,7 +16,7 @@ func main() {
 
 	flag.Parse()
 
-	c := gocacheclient.Client{
+	c := peacockclient.Client{
 		Host: *h,
 		Port: *p,
 	}

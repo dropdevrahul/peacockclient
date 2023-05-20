@@ -1,4 +1,4 @@
-package gocacheclient
+package peacockclient
 
 import (
 	"bufio"
@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/dropdevrahul/gocache/protocol"
+	"github.com/dropdevrahul/peacock/protocol"
 )
 
 const COMMAND_LENGTH int = 11 // in bytes
