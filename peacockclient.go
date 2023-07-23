@@ -65,7 +65,7 @@ func (c Client) Send(cmd string, key string, payload string) (*Response, error) 
 
 	defer conn.Close()
 
-	if len(cmd) > MAX_PAYLOAD_LENGTH {
+	if len(payload) > MAX_PAYLOAD_LENGTH {
 		return nil, errors.New("cmd too large")
 	}
 
